@@ -1,0 +1,269 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions (Phase 3)
+    // ===============================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      // Allow if either signed in with email or anonymous (for public forms)
+      return isSignedIn();
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isHardcodedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "info.digitalmount@gmail.com" ||
+        request.auth.token.email == "mezabiullakhan@gmail.com" ||
+        request.auth.token.email == "zabiullakhanofficial@gmail.com" ||
+        request.auth.token.email == "send.smsports@gmail.com" ||
+        request.auth.token.email == "admin@auction.com"
+      );
+    }
+
+    function isSuperAdmin() {
+      return isHardcodedAdmin() || (
+        isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "SUPER_ADMIN"
+      );
+    }
+
+    function isSupport() {
+      return isSignedIn() && (
+        isSuperAdmin() || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "SUPPORT"
+        )
+      );
+    }
+
+    function isAdmin(auctionId) {
+      return isSignedIn() && (
+        request.auth.token.firebase.sign_in_provider != 'anonymous' ||
+        isSuperAdmin() || 
+        isSupport() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN" || 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "SUPER_ADMIN")) ||
+        (exists(/databases/$(database)/documents/auctions/$(auctionId)) && 
+         get(/databases/$(database)/documents/auctions/$(auctionId)).data.createdBy == request.auth.uid) ||
+        (exists(/databases/$(database)/documents/auctions/$(auctionId)/staff/$(request.auth.uid)))
+      );
+    }
+
+    function isValidString(val, minSize, maxSize) {
+      return val is string && val.size() >= minSize && val.size() <= maxSize;
+    }
+
+    // ===============================================================
+    // ENTITY VALIDATORS
+    // ===============================================================
+    function isValidRegistration(data) {
+      return data.fullName is string && 
+             data.fullName.size() >= 1 && 
+             data.fullName.size() <= 200 &&
+             (!('mobile' in data) || data.mobile is string) &&
+             (!('submittedAt' in data) || data.submittedAt is number);
+    }
+
+    // ===============================================================
+    // RULES
+    // ===============================================================
+
+    // Global Catch-all (Phase 0)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Public Collections
+    match /appConfig/{configId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /subscriptionPlans/{planId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /systemPopups/{popupId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /globalAssets/{assetId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /systemBroadcasts/{broadcastId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /promoCodes/{codeId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    match /scoringAssets/{assetId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /recollectionResponses/{responseId} {
+      allow create: if true;
+      allow read, update, delete: if isSignedIn();
+    }
+
+    match /system/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /tournaments/{tournamentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (request.auth.token.firebase.sign_in_provider != 'anonymous' || incoming().createdBy == request.auth.uid);
+      allow update, delete: if isSignedIn() && (request.auth.token.firebase.sign_in_provider != 'anonymous' || resource.data.createdBy == request.auth.uid || isSuperAdmin());
+
+      match /teams/{teamId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && (request.auth.token.firebase.sign_in_provider != 'anonymous' || get(/databases/$(database)/documents/tournaments/$(tournamentId)).data.createdBy == request.auth.uid || isSuperAdmin());
+      }
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin() || isSupport());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin() || isSupport());
+    }
+
+    match /auctions/{auctionId} {
+      // Auction is Public for browsing and registration
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isAdmin(auctionId);
+      allow delete: if isSuperAdmin();
+
+      // Sub-collections
+      match /players/{playerId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /teams/{teamId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /categories/{categoryId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /roles/{roleId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /registrations/{regId} {
+        // Auction registrations are public for the progress bar and headcount
+        allow read: if true;
+        allow create: if isValidRegistration(incoming());
+        allow update, delete: if isAdmin(auctionId);
+      }
+
+      match /captainCodes/{codeId} {
+        allow read: if true;
+        allow create: if isAdmin(auctionId);
+        allow update: if isAdmin(auctionId) || (
+          // Allow public to update usage count when registering
+          incoming().diff(existing()).affectedKeys().hasOnly(['currentUsage', 'teamCodes', 'teamUsedCount'])
+        );
+      }
+
+      match /registrationCodes/{codeId} {
+        allow read: if true;
+        allow create: if isAdmin(auctionId);
+        allow update: if isAdmin(auctionId) || (
+          // Allow public to update usage and log redemptions when registering
+          incoming().diff(existing()).affectedKeys().hasOnly(['currentUsage', 'redemptions'])
+        );
+        allow delete: if isAdmin(auctionId);
+      }
+
+      match /sponsors/{sponsorId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /auctionLogs/{logId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /arrangementDrafts/{draftId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /trades/{tradeId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /staff/{staffId} {
+        allow read: if isAdmin(auctionId);
+        allow write: if isAdmin(auctionId);
+      }
+
+      match /waitlist/{listId} {
+        allow create: if true;
+        allow read, update, delete: if isAdmin(auctionId);
+      }
+
+      match /recollectionForms/{formId} {
+        allow read: if true;
+        allow write: if isAdmin(auctionId);
+      }
+    }
+
+    // Support System
+    match /supportTickets/{ticketId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isSupport());
+      allow create: if isSignedIn() && (incoming().userId == request.auth.uid || isSupport());
+      allow update: if isSignedIn() && (
+        isSupport() || 
+        (resource.data.userId == request.auth.uid && incoming().userId == request.auth.uid)
+      );
+      allow delete: if isSuperAdmin();
+
+      match /messages/{msgId} {
+        allow read, write: if isSignedIn() && (
+          isSupport() || 
+          get(/databases/$(database)/documents/supportTickets/$(ticketId)).data.userId == request.auth.uid
+        );
+      }
+    }
+  }
+}

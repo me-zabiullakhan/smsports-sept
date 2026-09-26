@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix SM Sports Auction Platform",
+  "description": "A web-based cricket auction platform where users can organize, manage, and participate in real-time cricket player auctions. This application provides a dashboard for admins to control the auction and a live bidding interface for team managers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

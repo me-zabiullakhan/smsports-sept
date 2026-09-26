@@ -1,0 +1,209 @@
+{
+  "entities": {
+    "Auction": {
+      "title": "Auction",
+      "description": "Main auction configuration",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "venue": { "type": "string" },
+        "totalTeams": { "type": "number" },
+        "logoUrl": { "type": "string" },
+        "dateTBD": { "type": "boolean" },
+        "slabs": { "type": "array" },
+        "status": { "type": "string" },
+        "currentPlayerId": { "type": "string" },
+        "currentBid": { "type": "number" },
+        "highestBidder": { "type": "object" },
+        "timer": { "type": "number" },
+        "createdAt": { "type": "number" }
+      }
+    },
+    "Team": {
+      "title": "Team",
+      "description": "Auction teams",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "owner": { "type": "string" },
+        "budget": { "type": "number" },
+        "logoUrl": { "type": "string" },
+        "players": { "type": "array" },
+        "teamCode": { "type": "string" }
+      }
+    },
+    "Player": {
+      "title": "Player",
+      "description": "Player details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "role": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "status": { "type": "string" },
+        "soldPrice": { "type": "number" },
+        "soldTo": { "type": "string" }
+      }
+    },
+    "User": {
+      "title": "User",
+      "description": "User profiles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "plan": { "type": "object" }
+      }
+    },
+    "Match": {
+      "title": "Match",
+      "description": "Cricket matches",
+      "type": "object",
+      "properties": {
+        "teamAId": { "type": "string" },
+        "teamBId": { "type": "string" },
+        "status": { "type": "string" },
+        "totalOvers": { "type": "number" },
+        "currentInnings": { "type": "number" }
+      }
+    },
+    "RegisteredPlayer": {
+      "title": "Registered Player",
+      "description": "Registration form submissions",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "mobile": { "type": "string" },
+        "playerType": { "type": "string" },
+        "gender": { "type": "string" },
+        "dob": { "type": "string" },
+        "profilePic": { "type": "string" },
+        "status": { "type": "string" },
+        "submittedAt": { "type": "number" },
+        "jerseyName": { "type": "string" },
+        "jerseyNumber": { "type": "string" },
+        "jerseySize": { "type": "string" }
+      }
+    },
+    "CaptainCode": {
+      "title": "Captain Code",
+      "description": "Unique codes for priority access",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "assignedTo": { "type": "string" },
+        "teamName": { "type": "string" },
+        "usageLimit": { "type": "number" },
+        "currentUsage": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "teamCodes": { "type": "array" }
+      }
+    },
+    "RecollectionForm": {
+      "title": "Recollection Form",
+      "description": "Custom data collection forms",
+      "type": "object",
+      "properties": {
+        "auctionId": { "type": "string" },
+        "title": { "type": "string" },
+        "note": { "type": "string" },
+        "fields": { "type": "array" },
+        "isEnabled": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      }
+    },
+    "RecollectionResponse": {
+      "title": "Recollection Response",
+      "description": "Form submissions",
+      "type": "object",
+      "properties": {
+        "formId": { "type": "string" },
+        "responses": { "type": "object" },
+        "submittedAt": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/auctions/{auctionId}": {
+      "schema": "Auction",
+      "description": "Main auction document"
+    },
+    "/auctions/{auctionId}/teams/{teamId}": {
+      "schema": "Team",
+      "description": "Teams in this auction"
+    },
+    "/auctions/{auctionId}/players/{playerId}": {
+      "schema": "Player",
+      "description": "Players in this auction"
+    },
+    "/auctions/{auctionId}/arrangementDrafts/{draftId}": {
+      "schema": { "type": "object" },
+      "description": "Board arrangement snapshots"
+    },
+    "/auctions/{auctionId}/registrations/{regId}": {
+      "schema": "RegisteredPlayer",
+      "description": "Player registration submissions"
+    },
+    "/auctions/{auctionId}/captainCodes/{codeId}": {
+      "schema": "CaptainCode",
+      "description": "Priority access codes"
+    },
+    "/auctions/{auctionId}/waitlist/{waitId}": {
+      "schema": { "type": "object" },
+      "description": "Registration waitlist"
+    },
+    "/auctions/{auctionId}/settings/{settingId}": {
+      "schema": { "type": "object" },
+      "description": "Auction specific settings"
+    },
+    "/auctions/{auctionId}/recollectionForms/{formId}": {
+      "schema": "RecollectionForm",
+      "description": "Data collection forms for this auction"
+    },
+    "/recollectionResponses/{responseId}": {
+      "schema": "RecollectionResponse",
+      "description": "Global collection of form responses"
+    },
+    "/system/{docId}": {
+      "schema": { "type": "object", "properties": { "teamIdCounter": { "type": "number" } } },
+      "description": "Global system metadata counters"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "Tournament matches"
+    },
+    "/appConfig/{configId}": {
+      "schema": { "type": "object" },
+      "description": "Global system configuration"
+    },
+    "/globalAssets/{assetId}": {
+      "schema": { "type": "object" },
+      "description": "System-wide brand assets"
+    },
+    "/systemBroadcasts/{broadcastId}": {
+      "schema": { "type": "object" },
+      "description": "Global ticker messages"
+    },
+    "/systemPopups/{popupId}": {
+      "schema": { "type": "object" },
+      "description": "Global system alerts"
+    },
+    "/subscriptionPlans/{planId}": {
+      "schema": { "type": "object" },
+      "description": "Monetization tiers"
+    },
+    "/promoCodes/{codeId}": {
+      "schema": { "type": "object" },
+      "description": "System promo codes"
+    }
+  }
+}
